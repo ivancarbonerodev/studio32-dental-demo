@@ -1,0 +1,29 @@
+{
+  "name": "studio32-dental-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Landing demo de Studio32 Dental Studio (clínica ficticia en Chamberí, Madrid).",
+  "type": "module",
+  "scripts": {
+    "build": "node --env-file-if-exists=.env scripts/build.mjs",
+    "dev": "npm run build && node --env-file-if-exists=.env scripts/dev-server.mjs",
+    "images": "node scripts/images.mjs",
+    "og": "node scripts/og-image.mjs",
+    "test": "node scripts/qa.mjs",
+    "lighthouse": "node scripts/lighthouse.mjs",
+    "qa:cal": "node --env-file-if-exists=.env scripts/qa-cal.mjs"
+  },
+  "devDependencies": {
+    "@alpinejs/collapse": "3.17.4",
+    "@alpinejs/intersect": "3.17.4",
+    "@fontsource/inter": "5.3.0",
+    "@fontsource/space-grotesk": "5.3.0",
+    "alpinejs": "3.17.4",
+    "esbuild": "0.28.2",
+    "lighthouse": "13.5.0",
+    "lucide": "1.49.0",
+    "puppeteer": "25.12.0",
+    "sharp": "0.35.5",
+    "tailwindcss": "3.4.19"
+  }
+}

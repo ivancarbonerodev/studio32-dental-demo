@@ -1,6 +1,10 @@
 # Dependencies
 node_modules/
-package-lock.json
+
+# Build y cachés
+dist/
+.cache/
+.netlify/
 
 # Vercel
 .vercel

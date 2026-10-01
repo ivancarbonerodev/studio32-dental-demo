@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fuentes autoalojadas (subset latin, cubre el español) */
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap; src: url(/assets/fonts/inter-latin-400-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 500; font-display: swap; src: url(/assets/fonts/inter-latin-500-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 600; font-display: swap; src: url(/assets/fonts/inter-latin-600-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 700; font-display: swap; src: url(/assets/fonts/inter-latin-700-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 500; font-display: swap; src: url(/assets/fonts/space-grotesk-latin-500-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 600; font-display: swap; src: url(/assets/fonts/space-grotesk-latin-600-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 700; font-display: swap; src: url(/assets/fonts/space-grotesk-latin-700-normal.woff2) format('woff2'); }
+
+body { font-family: 'Inter', sans-serif; background-color: #FAF9F5; color: #0B0F14; }
+h1, h2, h3, .font-display { font-family: 'Space Grotesk', sans-serif; }
+::selection { background: #00D9A3; color: #0B0F14; }
+[x-cloak] { display: none !important; }
+
+/* Páginas legales */
+.legal { color: rgb(11 15 20 / 0.85); line-height: 1.7; }
+.legal h2 { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1.35rem; margin: 2.2rem 0 0.75rem; color: #0B0F14; }
+.legal p, .legal ul { margin: 0.75rem 0; }
+.legal ul { list-style: disc; padding-left: 1.4rem; }
+.legal li { margin: 0.4rem 0; }
+.legal a { text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
+.legal table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin: 1rem 0; }
+.legal th, .legal td { border: 1px solid rgb(11 15 20 / 0.15); padding: 0.6rem 0.75rem; text-align: left; vertical-align: top; }
+.legal thead th, .legal tbody th { background: #E3FBF3; font-weight: 600; }
+.legal code { background: rgb(11 15 20 / 0.06); padding: 0.1rem 0.35rem; border-radius: 0.25rem; font-size: 0.85em; }
+.legal .table-wrap { overflow-x: auto; }
