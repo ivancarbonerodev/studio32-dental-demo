@@ -1,9 +1,13 @@
-// POST /lead — recibe un lead, lo valida y lo reenvía a LEAD_WEBHOOK_URL (si existe) o lo registra en logs (modo demo).
-// Sin base de datos ni servicios externos. Formato del JSON de entrada y de salida del webhook: ver README.
+// POST /lead — recibe un lead, lo valida y lo entrega por UNO de estos canales (por orden de prioridad):
+//   1. LEAD_WEBHOOK_URL → reenvío del JSON a esa URL.
+//   2. RESEND_API_KEY + LEAD_NOTIFY_EMAIL → aviso por correo con Resend.
+//   3. Nada configurado → modo demo: solo se registra en logs.
+// Sin base de datos. Formato del JSON de entrada y de salida del webhook: ver README.
 import { json, clientIp, rateLimit, readJson } from '../lib/http.mjs';
+import { sendLeadEmail } from '../lib/email.mjs';
 
 const ORIGENES = ['chat', 'formulario', 'reserva'];
-const MAX = { nombre: 80, tratamiento: 60, mensaje: 500 };
+const MAX = { nombre: 80, tratamiento: 60, mensaje: 500, resumenItems: 3, resumenChars: 200 };
 const WEBHOOK_TIMEOUT_MS = 5000;
 
 const clean = (v) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim() : v);
@@ -34,12 +38,22 @@ export function validateLead(input) {
   else if (typeof mensaje !== 'string') errors.mensaje = 'Mensaje no válido.';
   else if (mensaje.length > MAX.mensaje) errors.mensaje = `El mensaje no puede superar los ${MAX.mensaje} caracteres.`;
 
+  // Resumen del chat (opcional): hasta 3 preguntas del usuario de ≤200 caracteres
+  let resumen = [];
+  if (input.resumen !== undefined && input.resumen !== null) {
+    if (!Array.isArray(input.resumen) || input.resumen.length > MAX.resumenItems || input.resumen.some((q) => typeof q !== 'string' || clean(q).length > MAX.resumenChars)) {
+      errors.resumen = `El resumen admite hasta ${MAX.resumenItems} frases de ${MAX.resumenChars} caracteres.`;
+    } else {
+      resumen = input.resumen.map(clean).filter(Boolean);
+    }
+  }
+
   if (input.consentimiento !== true) errors.consentimiento = 'Debes aceptar la política de privacidad para que podamos contactarte.';
 
   if (!ORIGENES.includes(input.origen)) errors.origen = `El origen debe ser uno de: ${ORIGENES.join(', ')}.`;
 
   if (Object.keys(errors).length) return { errors };
-  return { lead: { nombre, telefono, tratamiento, mensaje, consentimiento: true, origen: input.origen } };
+  return { lead: { nombre, telefono, tratamiento, mensaje, consentimiento: true, origen: input.origen, ...(resumen.length ? { resumen } : {}) } };
 }
 
 async function forward(url, payload) {
@@ -88,7 +102,17 @@ export default async (req, context) => {
     return json(200, { ok: true });
   }
 
-  // Modo demo: sin LEAD_WEBHOOK_URL solo se registra en los logs de la función (teléfono enmascarado, sin texto libre).
+  // 2) Aviso por correo con Resend. Si falla, el usuario recibe igualmente OK y el error se registra SIN datos personales.
+  const resendKey = process.env.RESEND_API_KEY;
+  const notifyTo = process.env.LEAD_NOTIFY_EMAIL;
+  if (resendKey && notifyTo) {
+    const sent = await sendLeadEmail(payload, { apiKey: resendKey, to: notifyTo });
+    if (!sent.ok) console.error(`[lead] correo NO enviado (${sent.reason}): origen=${lead.origen} tratamiento="${lead.tratamiento}"`);
+    return json(200, { ok: true });
+  }
+  if (resendKey || notifyTo) console.warn('[lead] RESEND_API_KEY y LEAD_NOTIFY_EMAIL deben definirse las dos; se usa el modo demo.');
+
+  // 3) Modo demo: sin canal configurado solo se registra en los logs de la función (teléfono enmascarado, sin texto libre).
   console.log(
     '[lead][demo]',
     JSON.stringify({
@@ -97,6 +121,7 @@ export default async (req, context) => {
       telefono: `${'*'.repeat(Math.max(lead.telefono.length - 3, 0))}${lead.telefono.slice(-3)}`,
       tratamiento: lead.tratamiento,
       mensaje_chars: lead.mensaje.length,
+      resumen_items: lead.resumen?.length ?? 0,
       fecha: payload.fecha,
     }),
   );

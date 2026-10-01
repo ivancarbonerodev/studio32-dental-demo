@@ -3,7 +3,7 @@ const MAX_USER_MESSAGES = 12; // por sesión de navegador
 const MAX_CHARS = 500; // por mensaje (el servidor aplica el mismo límite)
 const KEY = 'studio32-chat-count';
 
-const WELCOME = '¡Hola! Soy el asistente virtual de Studio32 (una inteligencia artificial, no una persona). Puedo ayudarte con horarios, planes, reservas o dudas generales. No puedo dar consejo médico: para eso te ponemos con el equipo. ¿En qué te ayudo?';
+const WELCOME = '¡Hola! Soy el asistente virtual de Studio32. Puedo ayudarte con horarios, planes, reservas o dudas generales. No puedo dar consejo médico: para eso te ponemos con el equipo. ¿En qué te ayudo?';
 
 const readCount = () => {
   try { return Number(sessionStorage.getItem(KEY)) || 0; } catch { return 0; }
@@ -81,6 +81,10 @@ window.aiAssistant = function aiAssistant() {
       }
     },
 
+    // Últimas 3 preguntas del usuario (≤200 caracteres) para el aviso al equipo cuando deja sus datos en el chat
+    userSummary() {
+      return this.history.filter((m) => m.role === 'user').slice(-3).map((m) => m.content.slice(0, 200));
+    },
     leadSent() {
       this.leadDone = true;
       this.$nextTick(() => this.scrollToBottom());

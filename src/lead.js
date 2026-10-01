@@ -36,9 +36,10 @@ export async function postLead(payload) {
 
 // Componente Alpine reutilizable: formulario corto (origen "formulario") y formulario dentro del chat (origen "chat").
 // `website` es el honeypot: oculto para personas, los bots suelen rellenarlo y el servidor lo rechaza.
-window.leadForm = function leadForm(origen, { withTratamiento = true } = {}) {
+window.leadForm = function leadForm(origen, { withTratamiento = true, resumen = null } = {}) {
   return {
     origen,
+    getResumen: resumen, // función opcional: devuelve las últimas preguntas del chat
     withTratamiento,
     tratamientos: TRATAMIENTOS,
     nombre: '',
@@ -69,6 +70,7 @@ window.leadForm = function leadForm(origen, { withTratamiento = true } = {}) {
         consentimiento: this.consentimiento === true,
         origen: this.origen,
         website: this.website,
+        ...(this.getResumen ? (r => (r.length ? { resumen: r } : {}))(this.getResumen()) : {}),
       });
       if (res.ok) {
         this.status = 'sent';

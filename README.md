@@ -52,6 +52,7 @@ Si cambias algo en `src/`, vuelve a lanzarlo (el build tarda ~1 s).
 | `npm run build`      | Genera `dist/` (CSS minificado, JS empaquetado, páginas legales, sitemap, robots)           |
 | `npm test`           | Batería de pruebas: endpoints, chat, formulario, reserva, WhatsApp y cookies (con mocks)    |
 | `npm run lighthouse` | Lighthouse móvil sobre `http://localhost:3000` (necesita `npm run dev` en otra terminal)    |
+| `npm run lead:test`  | Envía un lead de prueba a `/lead` (`-- chat` simula un lead del chat; admite una URL como 2.º argumento) |
 | `npm run images`     | Regenera los WebP desde Unsplash (caché en `.cache/`)                                       |
 | `npm run og`         | Regenera `public/assets/og-image.png`                                                       |
 
@@ -75,10 +76,12 @@ Si cambias algo en `src/`, vuelve a lanzarlo (el build tarda ~1 s).
 | `WHATSAPP_NUMBER`    | Sí          | Número internacional sin `+` (p. ej. `34600123456`). Por defecto, un número falso           |
 | `ANTHROPIC_API_KEY`  | Para el chat | Clave de la API de Anthropic. **Solo servidor.** Sin ella el chat responde con un error amable |
 | `ANTHROPIC_MODEL`    | No          | Por defecto `claude-haiku-4-5-20251001`                                                      |
-| `LEAD_WEBHOOK_URL`   | No          | Si existe, cada lead se reenvía ahí (ver más abajo). Si no, modo demo                        |
+| `LEAD_WEBHOOK_URL`   | No          | Si existe, cada lead se reenvía ahí y no se envía correo (ver más abajo)                     |
+| `RESEND_API_KEY`     | Para el correo | Clave de Resend. **Solo servidor.** Junto con `LEAD_NOTIFY_EMAIL`, activa el aviso por correo |
+| `LEAD_NOTIFY_EMAIL`  | Para el correo | Correo que recibe cada lead (el de tu cuenta de Resend)                                   |
 | `PLAUSIBLE_DOMAIN`   | No          | Dominio dado de alta en Plausible. Sin definir: no hay analítica                             |
 
-Ninguna clave va al cliente: `ANTHROPIC_API_KEY` y `LEAD_WEBHOOK_URL` solo las leen las funciones. El resto son valores
+Ninguna clave va al cliente: `ANTHROPIC_API_KEY`, `RESEND_API_KEY` y `LEAD_WEBHOOK_URL` solo las leen las funciones. El resto son valores
 públicos que el build incrusta en el HTML.
 
 ## Reserva con Cal.com
@@ -100,16 +103,27 @@ En el HTML se usa el marcador `%WA:clave%`; una clave inexistente rompe el build
   Declara que es un asistente virtual (IA), prohíbe el consejo clínico, indica qué hacer ante urgencias y deriva a una persona
   añadiendo la etiqueta `[[LEAD]]`, que el servidor elimina y convierte en `lead: true` para abrir el formulario de contacto en el chat.
   **Si cambias datos de la clínica, actualiza este fichero.**
+- Elementos flotantes: WhatsApp, chat y CTA móvil dejan libres los 80 px inferiores (+ `env(safe-area-inset-bottom)`) porque Netlify puede inyectar su badge «Powered by Netlify» (no está en este repo; se gestiona en los ajustes del sitio). En pantallas estrechas se ocultan mientras el banner de cookies está abierto.
 - Protecciones: máximo 12 mensajes por sesión (cliente), 500 caracteres por mensaje, 20 turnos de historial y 400 tokens de
   salida (servidor), 30 peticiones / 10 min por IP, timeout de 20 s y mensajes de error amables.
 - El límite por IP es en memoria (por instancia de función): frena abusos casuales, no es un WAF.
+
+## Recibir los leads por correo (Resend)
+
+Sin webhook, cada lead llega a tu bandeja con **origen** (formulario o chat), nombre, teléfono, tratamiento, mensaje (si lo hay) y **fecha y hora en Europe/Madrid**. Los leads del chat añaden las últimas preguntas del usuario (hasta 3, de ≤200 caracteres).
+
+1. Crea una cuenta en [resend.com](https://resend.com) con **el correo donde quieres recibir los avisos** y genera una API key (*API Keys → Create*, permiso «Sending access»).
+2. Define `RESEND_API_KEY` y `LEAD_NOTIFY_EMAIL` (tu correo) en `.env` y en Netlify, y vuelve a desplegar.
+3. Prueba: `npm run dev` y, en otra terminal, `npm run lead:test` (o `npm run lead:test -- chat`). Debe responder `HTTP 200` sin `demo` y llegarte el correo (mira también spam y https://resend.com/emails).
+
+Notas: el remitente es `onboarding@resend.dev`, que solo envía al correo de la cuenta de Resend; para enviar a otras direcciones hay que verificar un dominio en Resend y cambiar el remitente en [netlify/lib/email.mjs](netlify/lib/email.mjs). Si el envío falla, la persona que dejó el lead sigue viendo la confirmación y el error se registra en los logs de la función sin datos personales (`[lead] correo NO enviado (HTTP 403 validation_error)`). Si defines `LEAD_WEBHOOK_URL`, el lead va solo al webhook y no se envía correo.
 
 ## Conectar una automatización
 
 El frontend nunca habla con Make, n8n ni similares: todos los leads van a `POST /lead`
 ([netlify/functions/lead.mjs](netlify/functions/lead.mjs)). Para conectar una automatización **basta con definir `LEAD_WEBHOOK_URL`**
-(un webhook de Make, n8n, Zapier, un CRM…) y volver a desplegar. Sin la variable, el lead solo se registra en los logs de la
-función (modo demo: teléfono enmascarado, sin texto libre).
+(un webhook de Make, n8n, Zapier, un CRM…) y volver a desplegar. Sin la variable se usa el correo con Resend si está configurado y, si
+tampoco, el lead solo se registra en los logs de la función (modo demo: teléfono enmascarado, sin texto libre).
 
 **Entrada** (`POST /lead`, `application/json`):
 
@@ -121,7 +135,8 @@ función (modo demo: teléfono enmascarado, sin texto libre).
   "mensaje": "Opcional, máx. 500 caracteres",
   "consentimiento": true,
   "origen": "formulario",
-  "website": ""
+  "website": "",
+  "resumen": ["Opcional: hasta 3 preguntas del usuario, ≤200 caracteres cada una (solo lo envía el chat)"]
 }
 ```
 
@@ -139,6 +154,7 @@ Validación en servidor (400 con `{ "error": "…", "errors": { campo: "…" } }
   "mensaje": "",
   "consentimiento": true,
   "origen": "formulario",
+  "resumen": ["…"],
   "fecha": "2026-10-01T09:47:18.115Z",
   "sitio": "studio32-demo"
 }

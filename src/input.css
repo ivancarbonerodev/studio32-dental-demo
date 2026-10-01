@@ -28,3 +28,20 @@ h1, h2, h3, .font-display { font-family: 'Space Grotesk', sans-serif; }
 .legal thead th, .legal tbody th { background: #E3FBF3; font-weight: 600; }
 .legal code { background: rgb(11 15 20 / 0.06); padding: 0.1rem 0.35rem; border-radius: 0.25rem; font-size: 0.85em; }
 .legal .table-wrap { overflow-x: auto; }
+
+/* Elementos flotantes (WhatsApp, chat, CTA móvil, banner de cookies).
+   Dejan libres los 5rem inferiores (80 px) + safe-area: Netlify puede inyectar su badge
+   «Powered by Netlify» (iframe fijo de 64 px de alto en la esquina inferior derecha) y no debe taparlos.
+   Pila en la columna derecha: WhatsApp (48/56 px) → 16 px → burbuja del chat. */
+.float-bottom { bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
+.float-chat { bottom: calc(9rem + env(safe-area-inset-bottom, 0px)); }
+.chat-panel { max-height: calc(100dvh - 14rem - env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 640px) {
+  .float-chat { bottom: calc(9.5rem + env(safe-area-inset-bottom, 0px)); }
+  .chat-panel { max-height: calc(100dvh - 15rem - env(safe-area-inset-bottom, 0px)); }
+}
+
+/* En pantallas estrechas el banner de cookies ocupa todo el ancho: mientras está abierto se ocultan los botones flotantes. */
+@media (max-width: 639px) {
+  .cookie-banner-open [data-floating] { display: none !important; }
+}

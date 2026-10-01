@@ -45,7 +45,10 @@ window.cookieBanner = function cookieBanner() {
   return {
     visible: false,
     init() {
+      const sync = (v) => document.documentElement.classList.toggle('cookie-banner-open', v);
       this.visible = read() === null;
+      sync(this.visible);
+      this.$watch('visible', sync);
       window.addEventListener('open-cookie-settings', () => { this.visible = true; });
     },
     accept() { write(true); loadAnalytics(); this.visible = false; },
