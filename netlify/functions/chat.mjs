@@ -4,7 +4,8 @@ import { SYSTEM_PROMPT } from '../lib/clinic.mjs';
 
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
 const API_URL = process.env.ANTHROPIC_API_URL || 'https://api.anthropic.com/v1/messages'; // override solo para pruebas
-const MAX_INPUT_CHARS = 500; // por mensaje
+const MAX_INPUT_CHARS = 500; // por mensaje del usuario
+const MAX_ASSISTANT_CHARS = 2000; // respuestas previas del asistente que el cliente reenvía en el historial
 const MAX_MESSAGES = 20; // turnos aceptados en el historial
 const MAX_BODY_BYTES = 20000;
 const MAX_TOKENS = 400;
@@ -36,7 +37,8 @@ export default async (req, context) => {
     if (!m || (m.role !== 'user' && m.role !== 'assistant') || typeof m.content !== 'string') return json(400, { error: 'Conversación no válida.' });
     const content = m.content.trim();
     if (!content) return json(400, { error: 'No se admiten mensajes vacíos.' });
-    if (content.length > MAX_INPUT_CHARS) return json(400, { error: `Tu mensaje es demasiado largo (máximo ${MAX_INPUT_CHARS} caracteres).` });
+    if (m.role === 'user' && content.length > MAX_INPUT_CHARS) return json(400, { error: `Tu mensaje es demasiado largo (máximo ${MAX_INPUT_CHARS} caracteres).` });
+    if (m.role === 'assistant' && content.length > MAX_ASSISTANT_CHARS) return json(400, { error: 'Conversación no válida.' });
     messages.push({ role: m.role, content });
   }
   if (messages[0].role !== 'user' || messages.at(-1).role !== 'user') return json(400, { error: 'Conversación no válida.' });

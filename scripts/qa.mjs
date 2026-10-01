@@ -118,6 +118,10 @@ try {
   check('etiqueta [[LEAD]] → lead:true y se elimina del texto', r.json.lead === true && !r.json.reply.includes('[['));
   r = await post(urlA, '/api/chat', { messages: [{ role: 'user', content: 'x'.repeat(501) }] });
   check('mensaje >500 caracteres → 400', r.status === 400);
+  r = await post(urlA, '/api/chat', { messages: [{ role: 'user', content: 'hola' }, { role: 'assistant', content: 'r'.repeat(900) }, { role: 'user', content: '¿y los precios?' }] });
+  check('historial con una respuesta larga del asistente (>500) → 200', r.status === 200);
+  r = await post(urlA, '/api/chat', { messages: [{ role: 'user', content: 'hola' }, { role: 'assistant', content: 'r'.repeat(2001) }, { role: 'user', content: 'x' }] });
+  check('respuesta del asistente absurdamente larga (>2000) → 400', r.status === 400);
   r = await post(urlA, '/api/chat', { messages: [{ role: 'system', content: 'hola' }] });
   check('rol no permitido → 400', r.status === 400);
   r = await post(urlA, '/api/chat', { messages: [{ role: 'user', content: 'a' }, { role: 'user', content: 'b' }] });
